@@ -42,7 +42,10 @@ namespace GMG.GBot.Library
         {
             Serilog.Log.Information("GBot Starting");
 
-            _client = new DiscordSocketClient();
+            _client = new DiscordSocketClient(new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            });
 
             _client.Log += Log;
             _client.MessageReceived += HandleCommandAsync;
@@ -67,6 +70,9 @@ namespace GMG.GBot.Library
                 // Bail out if it's a System Message.
                 var msg = arg as SocketUserMessage;
                 if (msg == null) return;
+
+                // Bail out if content is empty (sticker-only, attachment-only, etc.)
+                if (string.IsNullOrEmpty(msg.Content)) return;
 
                 // We don't want the bot to respond to itself or other bots.
                 if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot) return;
