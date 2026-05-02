@@ -33,9 +33,9 @@ namespace GMG.GBot.Library
             useGoDadddyProvider = bool.Parse(configuration["GBotService:UseGoDadddyProvider"]);
             useDNSLookupProvider = bool.Parse(configuration["GBotService:UseDNSLookupProvider"]);
 
-            IPAddressProvider ipaddressProvider = new(configuration);
-            GoDaddyProvider goDaddyProvider = new(RootRecord, configuration);
-            DNSLookupProvider lookupProvider = new();
+            ipaddressProvider = new(configuration);
+            goDaddyProvider = new(RootRecord, configuration);
+            lookupProvider = new();
         }
 
         public async Task Start(CancellationToken? stoppingToken = null)
@@ -61,6 +61,7 @@ namespace GMG.GBot.Library
 
         private async Task HandleCommandAsync(SocketMessage arg)
         {
+            Serilog.Log.Debug($"HandleCommandAsync");
             try
             {
                 // Bail out if it's a System Message.
@@ -153,6 +154,30 @@ namespace GMG.GBot.Library
                                 await SendMessage(_client, txt);
                             }
                             break;
+                        case "!cert":
+                            {
+                                DateTime? expDate = await CertificateChecker.GetExpirationDate(DNSName);
+                                var txt = "";
+                                if (expDate.HasValue)
+                                {
+                                    txt += $"Certificate Expiration Date: {expDate}\r\n";
+                                    if (expDate.Value <= DateTime.Now)
+                                    {
+                                        txt += "The certificate has expired. It may need to be manually updated.\r\n";
+                                    }
+                                    else if (expDate.Value <= DateTime.Now.AddDays(-15))
+                                    {
+                                        var daysLeft = (DateTime.Now - expDate.Value).TotalDays;
+                                        txt += $"The certificate is nearly expired. It has {daysLeft} It may need to be manually updated.\r\n";
+                                    }
+                                }
+                                else
+                                {
+                                    txt += "Certificate not found. Perhaps the IP address has changed.";
+                                }
+                                await SendMessage(_client, txt);
+                                break;
+                            }
                         case "!help":
                             {
                                 var txt = "";
